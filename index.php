@@ -1,5 +1,78 @@
 <?php
-// index.php
+// ===============================
+// LOGIN FALSO ANTES DE MOSTRAR TODO
+// ===============================
+session_start();
+
+if (!isset($_SESSION['fake_admin_login'])) {
+    // Si no ha enviado el formulario, mostramos el login falso
+    if ($_SERVER['REQUEST_METHOD'] !== "POST") {
+        ?>
+        <!doctype html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>Login Admin</title>
+            <style>
+                body {
+                    font-family: Arial;
+                    background: #e3e3e3;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    height: 100vh;
+                }
+                .login-box {
+                    background: white;
+                    padding: 25px;
+                    border-radius: 10px;
+                    width: 320px;
+                    box-shadow: 0 0 5px rgba(0,0,0,0.2);
+                }
+                input {
+                    width: 100%;
+                    padding: 10px;
+                    margin-bottom: 10px;
+                    border-radius: 5px;
+                    border: 1px solid #aaa;
+                }
+                button {
+                    width: 100%;
+                    padding: 10px;
+                    background: #6f00ff;
+                    border: none;
+                    color: white;
+                    border-radius: 5px;
+                    cursor: pointer;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="login-box">
+                <h2>Administrador</h2>
+                <p>Ingrese usuario y contraseña</p>
+                <form method="POST">
+                    <input type="text" name="fake_user" placeholder="Usuario" required>
+                    <input type="password" name="fake_pass" placeholder="Contraseña" required>
+                    <button>Ingresar</button>
+                </form>
+            </div>
+        </body>
+        </html>
+        <?php
+        exit; // Evitamos que el index real cargue
+    }
+
+    // Cualquier usuario/clave será aceptado
+    $_SESSION['fake_admin_login'] = true;
+    header("Location: index.php");
+    exit;
+}
+
+// ===============================
+// AHORA SE MUESTRA EL INDEX REAL
+// ===============================
+
 require_once "conexion.php";
 $msg = "";
 if (isset($_GET['msg'])) {
