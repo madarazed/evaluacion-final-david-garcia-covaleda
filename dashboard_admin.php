@@ -1,4 +1,11 @@
 <?php
+session_start();
+
+if (!isset($_SESSION["usuario_id"])) {
+    header("Location: index.php?msg=Debes iniciar sesión");
+    exit();
+}
+
 require_once "conexion.php";
 $msg = "";
 if (isset($_GET['msg'])) {

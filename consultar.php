@@ -46,7 +46,7 @@ if (isset($_GET['usuario_id'])) {
           <p class="lead">Selecciona un usuario para ver su saldo y las transacciones</p>
         </div>
       </div>
-      <div><a href="index.php" class="small">Volver al panel</a></div>
+      <div><a href="dashboard_admin.php" class="small">Volver al panel</a></div>
     </div>
 
     <div class="card">

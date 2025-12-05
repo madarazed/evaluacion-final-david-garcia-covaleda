@@ -1,12 +1,11 @@
 <?php
 session_start();
-require_once "conexion.php";
 
-// Si no hay sesión → al login
-if (!isset($_SESSION['usuario_id'])) {
-    header("Location: index.php");
-    exit;
+if (!isset($_SESSION["usuario_id"])) {
+    header("Location: index.php?msg=Debes iniciar sesión");
+    exit();
 }
+
 
 // Datos del usuario logueado
 $user_id = $_SESSION['usuario_id'];
