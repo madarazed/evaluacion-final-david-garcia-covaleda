@@ -83,6 +83,7 @@ $stmt->close();
           <a href="consignar.php">Consignar</a>
           <a href="retirar.php">Retirar</a>
           <a href="consultar.php">Consultar saldo / historial</a>
+          <a href="logout.php">Cerrar sesión</a>
         </div>
       </aside>
     </div>

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 03-12-2025 a las 19:39:20
+-- Tiempo de generación: 05-12-2025 a las 21:30:03
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.2.12
 
@@ -40,9 +40,7 @@ CREATE TABLE `transacciones` (
 --
 
 INSERT INTO `transacciones` (`id`, `usuario_id`, `tipo`, `monto`, `fecha`) VALUES
-(1, 1, 'consignar', 10000.00, '2025-12-03 18:36:58'),
-(2, 1, 'consignar', 10000.00, '2025-12-03 18:37:09'),
-(3, 1, 'retirar', 10000.00, '2025-12-03 18:37:18');
+(4, 9, 'consignar', 109999.00, '2025-12-05 19:32:58');
 
 -- --------------------------------------------------------
 
@@ -53,8 +51,10 @@ INSERT INTO `transacciones` (`id`, `usuario_id`, `tipo`, `monto`, `fecha`) VALUE
 CREATE TABLE `usuarios` (
   `id` int(11) NOT NULL,
   `nombre` varchar(100) NOT NULL,
+  `usuario_login` varchar(100) DEFAULT NULL,
   `correo` varchar(120) NOT NULL,
   `password` varchar(255) NOT NULL,
+  `rol` enum('admin','user') NOT NULL DEFAULT 'user',
   `saldo` decimal(12,2) NOT NULL DEFAULT 0.00,
   `creado_en` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -63,8 +63,9 @@ CREATE TABLE `usuarios` (
 -- Volcado de datos para la tabla `usuarios`
 --
 
-INSERT INTO `usuarios` (`id`, `nombre`, `correo`, `password`, `saldo`, `creado_en`) VALUES
-(1, 'david', 'david@gmail.com', '$2y$10$lh6IQhcdgDuBdGtKu2o0VuWVnIqmxTkMFe4mSXsjoIxa8eCgIhB.a', 10000.00, '2025-12-03 18:36:58');
+INSERT INTO `usuarios` (`id`, `nombre`, `usuario_login`, `correo`, `password`, `rol`, `saldo`, `creado_en`) VALUES
+(3, 'Administrador', NULL, 'admin@nequi.com', '$2y$10$KTbUF8TOYrqMr5NSL2pVnuLcVEney9JmgtE/ZKynEMMdeU80vDhca', 'admin', 0.00, '2025-12-05 19:16:19'),
+(9, 'david garcia', NULL, 'david@nequi.com', '$2y$10$lW/TKiMrfkd5a9guSLCPW.UnnW8GZ3RGvczN95yPLP8A2Xvw4BaMe', 'user', 109999.00, '2025-12-05 19:28:08');
 
 --
 -- Índices para tablas volcadas
@@ -82,7 +83,8 @@ ALTER TABLE `transacciones`
 --
 ALTER TABLE `usuarios`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `correo` (`correo`);
+  ADD UNIQUE KEY `correo` (`correo`),
+  ADD UNIQUE KEY `usuario_login` (`usuario_login`);
 
 --
 -- AUTO_INCREMENT de las tablas volcadas
@@ -92,13 +94,13 @@ ALTER TABLE `usuarios`
 -- AUTO_INCREMENT de la tabla `transacciones`
 --
 ALTER TABLE `transacciones`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT de la tabla `usuarios`
 --
 ALTER TABLE `usuarios`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- Restricciones para tablas volcadas

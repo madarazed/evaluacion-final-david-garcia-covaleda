@@ -75,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <p class="lead">Retirar saldo de un usuario</p>
         </div>
       </div>
-      <div><a href="index.php" class="small">Volver al panel</a></div>
+      <div><a href="dashboard_admin.php" class="small">Volver al panel</a></div>
     </div>
 
     <div class="card">
