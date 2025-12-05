@@ -1,158 +1,126 @@
 <?php
-// ===============================
-// LOGIN FALSO ANTES DE MOSTRAR TODO
-// ===============================
+// index.php - Login
 session_start();
+require_once 'conexion.php'; // tu archivo de conexión
 
-if (!isset($_SESSION['fake_admin_login'])) {
-    // Si no ha enviado el formulario, mostramos el login falso
-    if ($_SERVER['REQUEST_METHOD'] !== "POST") {
-        ?>
-        <!doctype html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <title>Login Admin</title>
-            <style>
-                body {
-                    font-family: Arial;
-                    background: #e3e3e3;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    height: 100vh;
-                }
-                .login-box {
-                    background: white;
-                    padding: 25px;
-                    border-radius: 10px;
-                    width: 320px;
-                    box-shadow: 0 0 5px rgba(0,0,0,0.2);
-                }
-                input {
-                    width: 100%;
-                    padding: 10px;
-                    margin-bottom: 10px;
-                    border-radius: 5px;
-                    border: 1px solid #aaa;
-                }
-                button {
-                    width: 100%;
-                    padding: 10px;
-                    background: #6f00ff;
-                    border: none;
-                    color: white;
-                    border-radius: 5px;
-                    cursor: pointer;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="login-box">
-                <h2>Administrador</h2>
-                <p>Ingrese usuario y contraseña</p>
-                <form method="POST">
-                    <input type="text" name="fake_user" placeholder="Usuario" required>
-                    <input type="password" name="fake_pass" placeholder="Contraseña" required>
-                    <button>Ingresar</button>
-                </form>
-            </div>
-        </body>
-        </html>
-        <?php
-        exit; // Evitamos que el index real cargue
+// Si ya está autenticado, redirigir según rol
+if (isset($_SESSION['rol'])) {
+    if ($_SESSION['rol'] === 'admin') {
+        header('Location: admin_home.php');
+        exit;
+    } else {
+        header('Location: dashboard_user.php');
+        exit;
     }
-
-    // Cualquier usuario/clave será aceptado
-    $_SESSION['fake_admin_login'] = true;
-    header("Location: index.php");
-    exit;
 }
 
-// ===============================
-// AHORA SE MUESTRA EL INDEX REAL
-// ===============================
-
-require_once "conexion.php";
-$msg = "";
-if (isset($_GET['msg'])) {
-    $msg = htmlspecialchars($_GET['msg']);
+// Generar token CSRF simple para el formulario (GET)
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(16));
+    }
 }
 
-// obtener usuarios
-$stmt = $mysqli->prepare("SELECT id, nombre, correo, saldo, creado_en FROM usuarios ORDER BY creado_en DESC");
-$stmt->execute();
-$result = $stmt->get_result();
-$usuarios = $result->fetch_all(MYSQLI_ASSOC);
-$stmt->close();
+// Procesar formulario (POST)
+$error = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Verificar CSRF
+    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'])) {
+        $error = 'Token inválido. Recarga la página e intenta de nuevo.';
+    } else {
+        // Inputs
+        $input_usuario = trim($_POST['usuario'] ?? '');
+        $input_password = $_POST['password'] ?? '';
+
+        if ($input_usuario === '' || $input_password === '') {
+            $error = 'Por favor completa todos los campos.';
+        } else {
+            // Preparar consulta: buscar por usuario_login o por correo
+            $stmt = $conexion->prepare("SELECT id, usuario_login, password, rol, nombre FROM usuarios WHERE usuario_login = ? OR correo = ? LIMIT 1");
+            if ($stmt === false) {
+                $error = 'Error en la consulta. Revisa la conexión.';
+            } else {
+                $stmt->bind_param('ss', $input_usuario, $input_usuario);
+                $stmt->execute();
+                $res = $stmt->get_result();
+
+                if ($res && $res->num_rows === 1) {
+                    $row = $res->fetch_assoc();
+                    // Verificar contraseña hasheada
+                    if (password_verify($input_password, $row['password'])) {
+                        // Autenticación exitosa: inicializar sesión
+                        session_regenerate_id(true);
+                        $_SESSION['id'] = $row['id'];
+                        $_SESSION['rol'] = $row['rol'];
+                        $_SESSION['nombre'] = $row['nombre'];
+                        // Limpiar token CSRF para seguridad
+                        unset($_SESSION['csrf_token']);
+
+                        // Redirigir según rol
+                        if ($row['rol'] === 'admin') {
+                            header('Location: admin_home.php');
+                            exit;
+                        } else {
+                            header('Location: dashboard_user.php');
+                            exit;
+                        }
+                    } else {
+                        $error = 'Credenciales incorrectas.';
+                    }
+                } else {
+                    $error = 'Credenciales incorrectas.';
+                }
+                $stmt->close();
+            }
+        }
+    }
+}
 ?>
 <!doctype html>
-<html>
+<html lang="es">
 <head>
   <meta charset="utf-8">
-  <title>Administrador - Nequi</title>
+  <title>Nequi - Login</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <!-- Usa tu styles.css existente -->
   <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Pequeño estilo de respaldo si no usas styles.css */
+    body{font-family:Arial,Helvetica,sans-serif;background:#f5f7fb;padding:20px}
+    .card{max-width:420px;margin:60px auto;padding:20px;border-radius:8px;background:#fff;box-shadow:0 4px 12px rgba(0,0,0,.06)}
+    .form-group{margin-bottom:12px}
+    input[type=text], input[type=password]{width:100%;padding:10px;border:1px solid #ddd;border-radius:4px}
+    button{width:100%;padding:10px;border:0;background:#0066cc;color:#fff;border-radius:4px;cursor:pointer}
+    .error{color:#b00020;margin-bottom:10px}
+    .small-link{display:block;text-align:center;margin-top:10px}
+  </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <div class="brand">
-        <div class="logo">Nequi</div>
-        <div>
-          <h1>Nequi (Admin)</h1>
-          <p class="lead">Panel administrativo</p>
-        </div>
-      </div>
-      <div class="small">Administrador</div>
-    </div>
+  <div class="card">
+    <h2 style="margin-top:0">Iniciar sesión</h2>
 
-    <div class="grid">
-      <div class="card">
-        <?php if($msg): ?>
-          <div class="<?php echo (strpos($msg,'Error')===0)?'error':'success'; ?>"><?php echo $msg; ?></div>
-        <?php endif; ?>
+    <?php if (!empty($error)): ?>
+      <div class="error"><?= htmlspecialchars($error) ?></div>
+    <?php endif; ?>
 
-        <h2>Usuarios</h2>
-        <?php if(count($usuarios) === 0): ?>
-          <p class="small">No hay usuarios aún. Usa "Crear usuario" a la derecha.</p>
-        <?php else: ?>
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Correo</th>
-                <th>Saldo</th>
-                <th>Creado</th>
-              </tr>
-            </thead>
-            <tbody>
-              <?php foreach($usuarios as $u): ?>
-                <tr>
-                  <td><?php echo htmlspecialchars($u['nombre']); ?></td>
-                  <td><?php echo htmlspecialchars($u['correo']); ?></td>
-                  <td>$ <?php echo number_format($u['saldo'],2,',','.'); ?></td>
-                  <td class="small"><?php echo $u['creado_en']; ?></td>
-                </tr>
-              <?php endforeach; ?>
-            </tbody>
-          </table>
-        <?php endif; ?>
+    <form method="post" action="index.php" autocomplete="off">
+      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '') ?>">
 
-        <div class="footer">
-          <small>Panel simple — solo vista Administrador</small>
-        </div>
+      <div class="form-group">
+        <label for="usuario">Usuario o correo</label>
+        <input id="usuario" name="usuario" type="text" value="<?= isset($_POST['usuario']) ? htmlspecialchars($_POST['usuario']) : '' ?>" required>
       </div>
 
-      <aside class="card">
-        <h3>Acciones</h3>
-        <div class="menu">
-          <a href="crear_usuario.php">Crear usuario</a>
-          <a href="consignar.php">Consignar</a>
-          <a href="retirar.php">Retirar</a>
-          <a href="consultar.php">Consultar saldo / historial</a>
-        </div>
-      </aside>
-    </div>
+      <div class="form-group">
+        <label for="password">Contraseña</label>
+        <input id="password" name="password" type="password" required>
+      </div>
+
+      <button type="submit">Ingresar</button>
+    </form>
+
+    <a class="small-link" href="registro.php">¿No tienes cuenta? Regístrate</a>
+    <a class="small-link" href="forgot.php">¿Olvidaste tu contraseña?</a>
   </div>
 </body>
 </html>
