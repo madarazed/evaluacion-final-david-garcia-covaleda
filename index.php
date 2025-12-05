@@ -1,126 +1,102 @@
 <?php
-// index.php - Login
 session_start();
-require_once 'conexion.php'; // tu archivo de conexión
+require_once "conexion.php";
 
-// Si ya está autenticado, redirigir según rol
-if (isset($_SESSION['rol'])) {
-    if ($_SESSION['rol'] === 'admin') {
-        header('Location: admin_home.php');
-        exit;
+$mensaje = "";
+
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+
+    $correo = trim($_POST["correo"]);
+    $password = $_POST["password"];
+
+    if ($correo === "" || $password === "") {
+        $mensaje = "Por favor completa todos los campos.";
     } else {
-        header('Location: dashboard_user.php');
-        exit;
-    }
-}
 
-// Generar token CSRF simple para el formulario (GET)
-if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    if (empty($_SESSION['csrf_token'])) {
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(16));
-    }
-}
+        // Consultar usuario
+        $stmt = $mysqli->prepare("SELECT id, nombre, correo, password, rol FROM usuarios WHERE correo = ?");
+        $stmt->bind_param("s", $correo);
+        $stmt->execute();
+        $result = $stmt->get_result();
 
-// Procesar formulario (POST)
-$error = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Verificar CSRF
-    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'])) {
-        $error = 'Token inválido. Recarga la página e intenta de nuevo.';
-    } else {
-        // Inputs
-        $input_usuario = trim($_POST['usuario'] ?? '');
-        $input_password = $_POST['password'] ?? '';
+        if ($result->num_rows === 1) {
+            $user = $result->fetch_assoc();
 
-        if ($input_usuario === '' || $input_password === '') {
-            $error = 'Por favor completa todos los campos.';
-        } else {
-            // Preparar consulta: buscar por usuario_login o por correo
-            $stmt = $conexion->prepare("SELECT id, usuario_login, password, rol, nombre FROM usuarios WHERE usuario_login = ? OR correo = ? LIMIT 1");
-            if ($stmt === false) {
-                $error = 'Error en la consulta. Revisa la conexión.';
-            } else {
-                $stmt->bind_param('ss', $input_usuario, $input_usuario);
-                $stmt->execute();
-                $res = $stmt->get_result();
+            // Verificar contraseña
+            if (password_verify($password, $user["password"])) {
 
-                if ($res && $res->num_rows === 1) {
-                    $row = $res->fetch_assoc();
-                    // Verificar contraseña hasheada
-                    if (password_verify($input_password, $row['password'])) {
-                        // Autenticación exitosa: inicializar sesión
-                        session_regenerate_id(true);
-                        $_SESSION['id'] = $row['id'];
-                        $_SESSION['rol'] = $row['rol'];
-                        $_SESSION['nombre'] = $row['nombre'];
-                        // Limpiar token CSRF para seguridad
-                        unset($_SESSION['csrf_token']);
+                // Guardar sesión
+                $_SESSION["usuario_id"] = $user["id"];
+                $_SESSION["usuario_nombre"] = $user["nombre"];
+                $_SESSION["rol"] = $user["rol"];
 
-                        // Redirigir según rol
-                        if ($row['rol'] === 'admin') {
-                            header('Location: admin_home.php');
-                            exit;
-                        } else {
-                            header('Location: dashboard_user.php');
-                            exit;
-                        }
-                    } else {
-                        $error = 'Credenciales incorrectas.';
-                    }
+                // Redirección según rol
+                if ($user["rol"] === "admin") {
+                    header("Location: dashboard_admin.php");
                 } else {
-                    $error = 'Credenciales incorrectas.';
+                    header("Location: dashboard_user.php");
                 }
-                $stmt->close();
+                exit;
+
+            } else {
+                $mensaje = "Correo o contraseña incorrectos.";
             }
+
+        } else {
+            $mensaje = "Correo o contraseña incorrectos.";
         }
+
+        $stmt->close();
     }
 }
 ?>
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
-  <title>Nequi - Login</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <!-- Usa tu styles.css existente -->
-  <link rel="stylesheet" href="styles.css">
-  <style>
-    /* Pequeño estilo de respaldo si no usas styles.css */
-    body{font-family:Arial,Helvetica,sans-serif;background:#f5f7fb;padding:20px}
-    .card{max-width:420px;margin:60px auto;padding:20px;border-radius:8px;background:#fff;box-shadow:0 4px 12px rgba(0,0,0,.06)}
-    .form-group{margin-bottom:12px}
-    input[type=text], input[type=password]{width:100%;padding:10px;border:1px solid #ddd;border-radius:4px}
-    button{width:100%;padding:10px;border:0;background:#0066cc;color:#fff;border-radius:4px;cursor:pointer}
-    .error{color:#b00020;margin-bottom:10px}
-    .small-link{display:block;text-align:center;margin-top:10px}
-  </style>
+    <meta charset="UTF-8">
+    <title>Iniciar sesión - Nequi Simple</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
 </head>
-<body>
-  <div class="card">
-    <h2 style="margin-top:0">Iniciar sesión</h2>
+<body class="bg-light">
 
-    <?php if (!empty($error)): ?>
-      <div class="error"><?= htmlspecialchars($error) ?></div>
-    <?php endif; ?>
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
 
-    <form method="post" action="index.php" autocomplete="off">
-      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '') ?>">
+            <div class="card shadow">
+                <div class="card-body">
 
-      <div class="form-group">
-        <label for="usuario">Usuario o correo</label>
-        <input id="usuario" name="usuario" type="text" value="<?= isset($_POST['usuario']) ? htmlspecialchars($_POST['usuario']) : '' ?>" required>
-      </div>
+                    <h3 class="text-center mb-3">Iniciar sesión</h3>
 
-      <div class="form-group">
-        <label for="password">Contraseña</label>
-        <input id="password" name="password" type="password" required>
-      </div>
+                    <?php if ($mensaje): ?>
+                        <div class="alert alert-danger"><?= $mensaje ?></div>
+                    <?php endif; ?>
 
-      <button type="submit">Ingresar</button>
-    </form>
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label>Correo:</label>
+                            <input type="email" name="correo" class="form-control" required>
+                        </div>
 
-    <a class="small-link" href="registro.php">¿No tienes cuenta? Regístrate</a>
-    <a class="small-link" href="forgot.php">¿Olvidaste tu contraseña?</a>
-  </div>
+                        <div class="mb-3">
+                            <label>Contraseña:</label>
+                            <input type="password" name="password" class="form-control" required>
+                        </div>
+
+                        <button class="btn btn-primary w-100">Entrar</button>
+
+                        <div class="text-center mt-3">
+                            <a href="registro.php">Crear cuenta</a>
+                        </div>
+
+                    </form>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
 </body>
 </html>
